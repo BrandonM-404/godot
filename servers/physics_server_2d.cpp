@@ -31,7 +31,6 @@
 #include "physics_server_2d.h"
 
 #include "core/config/project_settings.h"
-#include "core/string/print_string.h"
 #include "core/variant/typed_array.h"
 
 PhysicsServer2D *PhysicsServer2D::singleton = nullptr;
@@ -115,6 +114,12 @@ void PhysicsDirectBodyState2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_sleep_state", "enabled"), &PhysicsDirectBodyState2D::set_sleep_state);
 	ClassDB::bind_method(D_METHOD("is_sleeping"), &PhysicsDirectBodyState2D::is_sleeping);
 
+	ClassDB::bind_method(D_METHOD("set_collision_layer", "layer"), &PhysicsDirectBodyState2D::set_collision_layer);
+	ClassDB::bind_method(D_METHOD("get_collision_layer"), &PhysicsDirectBodyState2D::get_collision_layer);
+
+	ClassDB::bind_method(D_METHOD("set_collision_mask", "mask"), &PhysicsDirectBodyState2D::set_collision_mask);
+	ClassDB::bind_method(D_METHOD("get_collision_mask"), &PhysicsDirectBodyState2D::get_collision_mask);
+
 	ClassDB::bind_method(D_METHOD("get_contact_count"), &PhysicsDirectBodyState2D::get_contact_count);
 
 	ClassDB::bind_method(D_METHOD("get_contact_local_position", "contact_idx"), &PhysicsDirectBodyState2D::get_contact_local_position);
@@ -143,6 +148,8 @@ void PhysicsDirectBodyState2D::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "angular_velocity"), "set_angular_velocity", "get_angular_velocity");
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR2, "linear_velocity"), "set_linear_velocity", "get_linear_velocity");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "sleeping"), "set_sleep_state", "is_sleeping");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "collision_layer"), "set_collision_layer", "get_collision_layer");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "collision_mask"), "set_collision_mask", "get_collision_mask");
 	ADD_PROPERTY(PropertyInfo(Variant::TRANSFORM2D, "transform"), "set_transform", "get_transform");
 }
 
@@ -330,7 +337,7 @@ void PhysicsShapeQueryParameters2D::_bind_methods() {
 ///////////////////////////////////////////////////////
 
 Dictionary PhysicsDirectSpaceState2D::_intersect_ray(const Ref<PhysicsRayQueryParameters2D> &p_ray_query) {
-	ERR_FAIL_COND_V(!p_ray_query.is_valid(), Dictionary());
+	ERR_FAIL_COND_V(p_ray_query.is_null(), Dictionary());
 
 	RayResult result;
 	bool res = intersect_ray(p_ray_query->get_parameters(), result);
@@ -376,7 +383,7 @@ TypedArray<Dictionary> PhysicsDirectSpaceState2D::_intersect_point(const Ref<Phy
 }
 
 TypedArray<Dictionary> PhysicsDirectSpaceState2D::_intersect_shape(const Ref<PhysicsShapeQueryParameters2D> &p_shape_query, int p_max_results) {
-	ERR_FAIL_COND_V(!p_shape_query.is_valid(), TypedArray<Dictionary>());
+	ERR_FAIL_COND_V(p_shape_query.is_null(), TypedArray<Dictionary>());
 
 	Vector<ShapeResult> sr;
 	sr.resize(p_max_results);
@@ -396,7 +403,7 @@ TypedArray<Dictionary> PhysicsDirectSpaceState2D::_intersect_shape(const Ref<Phy
 }
 
 Vector<real_t> PhysicsDirectSpaceState2D::_cast_motion(const Ref<PhysicsShapeQueryParameters2D> &p_shape_query) {
-	ERR_FAIL_COND_V(!p_shape_query.is_valid(), Vector<real_t>());
+	ERR_FAIL_COND_V(p_shape_query.is_null(), Vector<real_t>());
 
 	real_t closest_safe, closest_unsafe;
 	bool res = cast_motion(p_shape_query->get_parameters(), closest_safe, closest_unsafe);
@@ -411,7 +418,7 @@ Vector<real_t> PhysicsDirectSpaceState2D::_cast_motion(const Ref<PhysicsShapeQue
 }
 
 TypedArray<Vector2> PhysicsDirectSpaceState2D::_collide_shape(const Ref<PhysicsShapeQueryParameters2D> &p_shape_query, int p_max_results) {
-	ERR_FAIL_COND_V(!p_shape_query.is_valid(), TypedArray<Vector2>());
+	ERR_FAIL_COND_V(p_shape_query.is_null(), TypedArray<Vector2>());
 
 	Vector<Vector2> ret;
 	ret.resize(p_max_results * 2);
@@ -429,7 +436,7 @@ TypedArray<Vector2> PhysicsDirectSpaceState2D::_collide_shape(const Ref<PhysicsS
 }
 
 Dictionary PhysicsDirectSpaceState2D::_get_rest_info(const Ref<PhysicsShapeQueryParameters2D> &p_shape_query) {
-	ERR_FAIL_COND_V(!p_shape_query.is_valid(), Dictionary());
+	ERR_FAIL_COND_V(p_shape_query.is_null(), Dictionary());
 
 	ShapeRestInfo sri;
 
@@ -607,7 +614,7 @@ void PhysicsTestMotionResult2D::_bind_methods() {
 ///////////////////////////////////////
 
 bool PhysicsServer2D::_body_test_motion(RID p_body, const Ref<PhysicsTestMotionParameters2D> &p_parameters, const Ref<PhysicsTestMotionResult2D> &p_result) {
-	ERR_FAIL_COND_V(!p_parameters.is_valid(), false);
+	ERR_FAIL_COND_V(p_parameters.is_null(), false);
 
 	MotionResult *result_ptr = nullptr;
 	if (p_result.is_valid()) {
@@ -754,6 +761,8 @@ void PhysicsServer2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("body_set_omit_force_integration", "body", "enable"), &PhysicsServer2D::body_set_omit_force_integration);
 	ClassDB::bind_method(D_METHOD("body_is_omitting_force_integration", "body"), &PhysicsServer2D::body_is_omitting_force_integration);
 
+	ClassDB::bind_method(D_METHOD("body_set_state_sync_callback", "body", "callable"), &PhysicsServer2D::body_set_state_sync_callback);
+
 	ClassDB::bind_method(D_METHOD("body_set_force_integration_callback", "body", "callable", "userdata"), &PhysicsServer2D::body_set_force_integration_callback, DEFVAL(Variant()));
 
 	ClassDB::bind_method(D_METHOD("body_test_motion", "body", "parameters", "result"), &PhysicsServer2D::_body_test_motion, DEFVAL(Variant()));
@@ -775,6 +784,9 @@ void PhysicsServer2D::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("joint_make_pin", "joint", "anchor", "body_a", "body_b"), &PhysicsServer2D::joint_make_pin, DEFVAL(RID()));
 	ClassDB::bind_method(D_METHOD("joint_make_groove", "joint", "groove1_a", "groove2_a", "anchor_b", "body_a", "body_b"), &PhysicsServer2D::joint_make_groove, DEFVAL(RID()), DEFVAL(RID()));
 	ClassDB::bind_method(D_METHOD("joint_make_damped_spring", "joint", "anchor_a", "anchor_b", "body_a", "body_b"), &PhysicsServer2D::joint_make_damped_spring, DEFVAL(RID()));
+
+	ClassDB::bind_method(D_METHOD("pin_joint_set_flag", "joint", "flag", "enabled"), &PhysicsServer2D::pin_joint_set_flag);
+	ClassDB::bind_method(D_METHOD("pin_joint_get_flag", "joint", "flag"), &PhysicsServer2D::pin_joint_get_flag);
 
 	ClassDB::bind_method(D_METHOD("pin_joint_set_param", "joint", "param", "value"), &PhysicsServer2D::pin_joint_set_param);
 	ClassDB::bind_method(D_METHOD("pin_joint_get_param", "joint", "param"), &PhysicsServer2D::pin_joint_get_param);
@@ -863,6 +875,12 @@ void PhysicsServer2D::_bind_methods() {
 	BIND_ENUM_CONSTANT(JOINT_PARAM_MAX_FORCE);
 
 	BIND_ENUM_CONSTANT(PIN_JOINT_SOFTNESS);
+	BIND_ENUM_CONSTANT(PIN_JOINT_LIMIT_UPPER);
+	BIND_ENUM_CONSTANT(PIN_JOINT_LIMIT_LOWER);
+	BIND_ENUM_CONSTANT(PIN_JOINT_MOTOR_TARGET_VELOCITY);
+
+	BIND_ENUM_CONSTANT(PIN_JOINT_FLAG_ANGULAR_LIMIT_ENABLED);
+	BIND_ENUM_CONSTANT(PIN_JOINT_FLAG_MOTOR_ENABLED);
 
 	BIND_ENUM_CONSTANT(DAMPED_SPRING_REST_LENGTH);
 	BIND_ENUM_CONSTANT(DAMPED_SPRING_STIFFNESS);
@@ -884,15 +902,15 @@ PhysicsServer2D::PhysicsServer2D() {
 	singleton = this;
 
 	// World2D physics space
-	GLOBAL_DEF_BASIC("physics/2d/default_gravity", 980.0);
-	GLOBAL_DEF_BASIC("physics/2d/default_gravity_vector", Vector2(0, 1));
+	GLOBAL_DEF_BASIC(PropertyInfo(Variant::FLOAT, "physics/2d/default_gravity", PROPERTY_HINT_RANGE, U"-4096,4096,0.001,or_less,or_greater,suffix:px/s\u00B2"), 980.0);
+	GLOBAL_DEF_BASIC(PropertyInfo(Variant::VECTOR2, "physics/2d/default_gravity_vector", PROPERTY_HINT_RANGE, "-10,10,0.001,or_less,or_greater"), Vector2(0, 1));
 	GLOBAL_DEF(PropertyInfo(Variant::FLOAT, "physics/2d/default_linear_damp", PROPERTY_HINT_RANGE, "-1,100,0.001,or_greater"), 0.1);
 	GLOBAL_DEF(PropertyInfo(Variant::FLOAT, "physics/2d/default_angular_damp", PROPERTY_HINT_RANGE, "-1,100,0.001,or_greater"), 1.0);
 
 	// PhysicsServer2D
-	GLOBAL_DEF("physics/2d/sleep_threshold_linear", 2.0);
-	GLOBAL_DEF("physics/2d/sleep_threshold_angular", Math::deg_to_rad(8.0));
-	GLOBAL_DEF(PropertyInfo(Variant::FLOAT, "physics/2d/time_before_sleep", PROPERTY_HINT_RANGE, "0,5,0.01,or_greater"), 0.5);
+	GLOBAL_DEF(PropertyInfo(Variant::FLOAT, "physics/2d/sleep_threshold_linear", PROPERTY_HINT_RANGE, "0,10,0.001,or_greater"), 2.0);
+	GLOBAL_DEF(PropertyInfo(Variant::FLOAT, "physics/2d/sleep_threshold_angular", PROPERTY_HINT_RANGE, "0,90,0.1,radians_as_degrees"), Math::deg_to_rad(8.0));
+	GLOBAL_DEF(PropertyInfo(Variant::FLOAT, "physics/2d/time_before_sleep", PROPERTY_HINT_RANGE, "0,5,0.01,or_greater,suffix:s"), 0.5);
 	GLOBAL_DEF(PropertyInfo(Variant::INT, "physics/2d/solver/solver_iterations", PROPERTY_HINT_RANGE, "1,32,1,or_greater"), 16);
 	GLOBAL_DEF(PropertyInfo(Variant::FLOAT, "physics/2d/solver/contact_recycle_radius", PROPERTY_HINT_RANGE, "0,10,0.01,or_greater"), 1.0);
 	GLOBAL_DEF(PropertyInfo(Variant::FLOAT, "physics/2d/solver/contact_max_separation", PROPERTY_HINT_RANGE, "0,10,0.01,or_greater"), 1.5);
@@ -915,6 +933,7 @@ void PhysicsServer2DManager::on_servers_changed() {
 	}
 	ProjectSettings::get_singleton()->set_custom_property_info(PropertyInfo(Variant::STRING, setting_property_name, PROPERTY_HINT_ENUM, physics_servers));
 	ProjectSettings::get_singleton()->set_restart_if_changed(setting_property_name, true);
+	ProjectSettings::get_singleton()->set_as_basic(setting_property_name, true);
 }
 
 void PhysicsServer2DManager::_bind_methods() {
@@ -961,7 +980,9 @@ String PhysicsServer2DManager::get_server_name(int p_id) {
 }
 
 PhysicsServer2D *PhysicsServer2DManager::new_default_server() {
-	ERR_FAIL_COND_V(default_server_id == -1, nullptr);
+	if (default_server_id == -1) {
+		return nullptr;
+	}
 	Variant ret;
 	Callable::CallError ce;
 	physics_2d_servers[default_server_id].create_callback.callp(nullptr, 0, ret, ce);

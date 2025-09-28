@@ -28,8 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef REMOTE_DEBUGGER_PEER_H
-#define REMOTE_DEBUGGER_PEER_H
+#pragma once
 
 #include "core/io/stream_peer_tcp.h"
 #include "core/object/ref_counted.h"
@@ -38,6 +37,8 @@
 #include "core/string/ustring.h"
 
 class RemoteDebuggerPeer : public RefCounted {
+	GDSOFTCLASS(RemoteDebuggerPeer, RefCounted);
+
 protected:
 	int max_queued_messages = 4096;
 
@@ -55,6 +56,8 @@ public:
 };
 
 class RemoteDebuggerPeerTCP : public RemoteDebuggerPeer {
+	GDSOFTCLASS(RemoteDebuggerPeerTCP, RemoteDebuggerPeer);
+
 private:
 	Ref<StreamPeerTCP> tcp_client;
 	Mutex mutex;
@@ -92,5 +95,3 @@ public:
 	RemoteDebuggerPeerTCP(Ref<StreamPeerTCP> p_stream = Ref<StreamPeerTCP>());
 	~RemoteDebuggerPeerTCP();
 };
-
-#endif // REMOTE_DEBUGGER_PEER_H

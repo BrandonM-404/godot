@@ -28,8 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef MULTIPLAYER_SYNCHRONIZER_H
-#define MULTIPLAYER_SYNCHRONIZER_H
+#pragma once
 
 #include "scene_replication_config.h"
 
@@ -66,6 +65,7 @@ private:
 	uint64_t last_sync_usec = 0;
 	uint16_t last_inbound_sync = 0;
 	uint32_t net_id = 0;
+	bool sync_started = false;
 
 	static Object *_get_prop_target(Object *p_obj, const NodePath &p_prop);
 	void _start();
@@ -118,10 +118,9 @@ public:
 
 	List<Variant> get_delta_state(uint64_t p_cur_usec, uint64_t p_last_usec, uint64_t &r_indexes);
 	List<NodePath> get_delta_properties(uint64_t p_indexes);
+	SceneReplicationConfig *get_replication_config_ptr() const;
 
 	MultiplayerSynchronizer();
 };
 
 VARIANT_ENUM_CAST(MultiplayerSynchronizer::VisibilityUpdateMode);
-
-#endif // MULTIPLAYER_SYNCHRONIZER_H

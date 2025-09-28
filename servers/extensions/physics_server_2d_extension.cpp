@@ -92,6 +92,12 @@ void PhysicsDirectBodyState2DExtension::_bind_methods() {
 	GDVIRTUAL_BIND(_set_sleep_state, "enabled");
 	GDVIRTUAL_BIND(_is_sleeping);
 
+	GDVIRTUAL_BIND(_set_collision_layer, "layer");
+	GDVIRTUAL_BIND(_get_collision_layer);
+
+	GDVIRTUAL_BIND(_set_collision_mask, "mask");
+	GDVIRTUAL_BIND(_get_collision_mask);
+
 	GDVIRTUAL_BIND(_get_contact_count);
 
 	GDVIRTUAL_BIND(_get_contact_local_position, "contact_idx");
@@ -315,6 +321,9 @@ void PhysicsServer2DExtension::_bind_methods() {
 	GDVIRTUAL_BIND(_joint_make_pin, "joint", "anchor", "body_a", "body_b");
 	GDVIRTUAL_BIND(_joint_make_groove, "joint", "a_groove1", "a_groove2", "b_anchor", "body_a", "body_b");
 	GDVIRTUAL_BIND(_joint_make_damped_spring, "joint", "anchor_a", "anchor_b", "body_a", "body_b");
+
+	GDVIRTUAL_BIND(_pin_joint_set_flag, "joint", "flag", "enabled");
+	GDVIRTUAL_BIND(_pin_joint_get_flag, "joint", "flag");
 
 	GDVIRTUAL_BIND(_pin_joint_set_param, "joint", "param", "value");
 	GDVIRTUAL_BIND(_pin_joint_get_param, "joint", "param");

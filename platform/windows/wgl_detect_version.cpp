@@ -35,12 +35,13 @@
 
 #include "core/string/print_string.h"
 #include "core/string/ustring.h"
+#include "core/variant/dictionary.h"
 
 #include <windows.h>
 
 #include <dwmapi.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 
 #define WGL_CONTEXT_MAJOR_VERSION_ARB 0x2091
 #define WGL_CONTEXT_MINOR_VERSION_ARB 0x2092
@@ -52,11 +53,6 @@
 #define WGL_RENDERER 0x1F01
 #define WGL_VERSION 0x1F02
 
-#if defined(__GNUC__)
-// Workaround GCC warning from -Wcast-function-type.
-#define GetProcAddress (void *)GetProcAddress
-#endif
-
 typedef HGLRC(APIENTRY *PFNWGLCREATECONTEXT)(HDC);
 typedef BOOL(APIENTRY *PFNWGLDELETECONTEXT)(HGLRC);
 typedef BOOL(APIENTRY *PFNWGLMAKECURRENT)(HDC, HGLRC);
@@ -64,9 +60,11 @@ typedef HGLRC(APIENTRY *PFNWGLCREATECONTEXTATTRIBSARBPROC)(HDC, HGLRC, const int
 typedef void *(APIENTRY *PFNWGLGETPROCADDRESS)(LPCSTR);
 typedef const char *(APIENTRY *PFNWGLGETSTRINGPROC)(unsigned int);
 
-int detect_wgl_version() {
-	int major = 0;
-	int minor = 0;
+Dictionary detect_wgl() {
+	Dictionary gl_info;
+	gl_info["version"] = 0;
+	gl_info["vendor"] = String();
+	gl_info["name"] = String();
 
 	PFNWGLCREATECONTEXT gd_wglCreateContext;
 	PFNWGLMAKECURRENT gd_wglMakeCurrent;
@@ -75,14 +73,14 @@ int detect_wgl_version() {
 
 	HMODULE module = LoadLibraryW(L"opengl32.dll");
 	if (!module) {
-		return 0;
+		return gl_info;
 	}
-	gd_wglCreateContext = (PFNWGLCREATECONTEXT)GetProcAddress(module, "wglCreateContext");
-	gd_wglMakeCurrent = (PFNWGLMAKECURRENT)GetProcAddress(module, "wglMakeCurrent");
-	gd_wglDeleteContext = (PFNWGLDELETECONTEXT)GetProcAddress(module, "wglDeleteContext");
-	gd_wglGetProcAddress = (PFNWGLGETPROCADDRESS)GetProcAddress(module, "wglGetProcAddress");
+	gd_wglCreateContext = (PFNWGLCREATECONTEXT)(void *)GetProcAddress(module, "wglCreateContext");
+	gd_wglMakeCurrent = (PFNWGLMAKECURRENT)(void *)GetProcAddress(module, "wglMakeCurrent");
+	gd_wglDeleteContext = (PFNWGLDELETECONTEXT)(void *)GetProcAddress(module, "wglDeleteContext");
+	gd_wglGetProcAddress = (PFNWGLGETPROCADDRESS)(void *)GetProcAddress(module, "wglGetProcAddress");
 	if (!gd_wglCreateContext || !gd_wglMakeCurrent || !gd_wglDeleteContext || !gd_wglGetProcAddress) {
-		return 0;
+		return gl_info;
 	}
 
 	LPCWSTR class_name = L"EngineWGLDetect";
@@ -137,10 +135,10 @@ int detect_wgl_version() {
 					PFNWGLCREATECONTEXTATTRIBSARBPROC gd_wglCreateContextAttribsARB = nullptr;
 					gd_wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)gd_wglGetProcAddress("wglCreateContextAttribsARB");
 					if (gd_wglCreateContextAttribsARB) {
-						HGLRC new_hRC = gd_wglCreateContextAttribsARB(hDC, 0, attribs);
+						HGLRC new_hRC = gd_wglCreateContextAttribsARB(hDC, nullptr, attribs);
 						if (new_hRC) {
 							if (gd_wglMakeCurrent(hDC, new_hRC)) {
-								PFNWGLGETSTRINGPROC gd_wglGetString = (PFNWGLGETSTRINGPROC)GetProcAddress(module, "glGetString");
+								PFNWGLGETSTRINGPROC gd_wglGetString = (PFNWGLGETSTRINGPROC)(void *)GetProcAddress(module, "glGetString");
 								if (gd_wglGetString) {
 									const char *prefixes[] = {
 										"OpenGL ES-CM ",
@@ -151,8 +149,8 @@ int detect_wgl_version() {
 									};
 									const char *version = (const char *)gd_wglGetString(WGL_VERSION);
 									if (version) {
-										const String device_vendor = String::utf8((const char *)gd_wglGetString(WGL_VENDOR)).strip_edges();
-										const String device_name = String::utf8((const char *)gd_wglGetString(WGL_RENDERER)).strip_edges();
+										const String device_vendor = String::utf8((const char *)gd_wglGetString(WGL_VENDOR)).strip_edges().trim_suffix(" Corporation");
+										const String device_name = String::utf8((const char *)gd_wglGetString(WGL_RENDERER)).strip_edges().trim_suffix("/PCIe/SSE2");
 										for (int i = 0; prefixes[i]; i++) {
 											size_t length = strlen(prefixes[i]);
 											if (strncmp(version, prefixes[i], length) == 0) {
@@ -160,12 +158,17 @@ int detect_wgl_version() {
 												break;
 											}
 										}
+										int major = 0;
+										int minor = 0;
 #ifdef _MSC_VER
 										sscanf_s(version, "%d.%d", &major, &minor);
 #else
 										sscanf(version, "%d.%d", &major, &minor);
 #endif
 										print_verbose(vformat("Native OpenGL API detected: %d.%d: %s - %s", major, minor, device_vendor, device_name));
+										gl_info["vendor"] = device_vendor;
+										gl_info["name"] = device_name;
+										gl_info["version"] = major * 10000 + minor;
 									}
 								}
 							}
@@ -183,7 +186,7 @@ int detect_wgl_version() {
 	}
 	UnregisterClassW(class_name, hInstance);
 
-	return major * 10000 + minor;
+	return gl_info;
 }
 
 #endif // WINDOWS_ENABLED && GLES3_ENABLED

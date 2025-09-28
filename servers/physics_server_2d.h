@@ -28,12 +28,13 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef PHYSICS_SERVER_2D_H
-#define PHYSICS_SERVER_2D_H
+#pragma once
 
 #include "core/io/resource.h"
 #include "core/object/class_db.h"
 #include "core/object/ref_counted.h"
+
+constexpr int MAX_CONTACTS_REPORTED_2D_MAX = 4096;
 
 class PhysicsDirectSpaceState2D;
 template <typename T>
@@ -86,6 +87,12 @@ public:
 
 	virtual void set_sleep_state(bool p_enable) = 0;
 	virtual bool is_sleeping() const = 0;
+
+	virtual void set_collision_layer(uint32_t p_layer) = 0;
+	virtual uint32_t get_collision_layer() const = 0;
+
+	virtual void set_collision_mask(uint32_t p_mask) = 0;
+	virtual uint32_t get_collision_mask() const = 0;
 
 	virtual int get_contact_count() const = 0;
 
@@ -553,11 +560,22 @@ public:
 	virtual void joint_make_damped_spring(RID p_joint, const Vector2 &p_anchor_a, const Vector2 &p_anchor_b, RID p_body_a, RID p_body_b = RID()) = 0;
 
 	enum PinJointParam {
-		PIN_JOINT_SOFTNESS
+		PIN_JOINT_SOFTNESS,
+		PIN_JOINT_LIMIT_UPPER,
+		PIN_JOINT_LIMIT_LOWER,
+		PIN_JOINT_MOTOR_TARGET_VELOCITY
 	};
 
 	virtual void pin_joint_set_param(RID p_joint, PinJointParam p_param, real_t p_value) = 0;
 	virtual real_t pin_joint_get_param(RID p_joint, PinJointParam p_param) const = 0;
+
+	enum PinJointFlag {
+		PIN_JOINT_FLAG_ANGULAR_LIMIT_ENABLED,
+		PIN_JOINT_FLAG_MOTOR_ENABLED
+	};
+
+	virtual void pin_joint_set_flag(RID p_joint, PinJointFlag p_flag, bool p_enabled) = 0;
+	virtual bool pin_joint_get_flag(RID p_joint, PinJointFlag p_flag) const = 0;
 
 	enum DampedSpringParam {
 		DAMPED_SPRING_REST_LENGTH,
@@ -749,7 +767,7 @@ protected:
 	static void _bind_methods();
 
 public:
-	PhysicsServer2D::MotionResult *get_result_ptr() const { return const_cast<PhysicsServer2D::MotionResult *>(&result); }
+	PhysicsServer2D::MotionResult *get_result_ptr() { return &result; }
 
 	Vector2 get_travel() const;
 	Vector2 get_remainder() const;
@@ -830,8 +848,7 @@ VARIANT_ENUM_CAST(PhysicsServer2D::CCDMode);
 VARIANT_ENUM_CAST(PhysicsServer2D::JointParam);
 VARIANT_ENUM_CAST(PhysicsServer2D::JointType);
 VARIANT_ENUM_CAST(PhysicsServer2D::PinJointParam);
+VARIANT_ENUM_CAST(PhysicsServer2D::PinJointFlag);
 VARIANT_ENUM_CAST(PhysicsServer2D::DampedSpringParam);
 VARIANT_ENUM_CAST(PhysicsServer2D::AreaBodyStatus);
 VARIANT_ENUM_CAST(PhysicsServer2D::ProcessInfo);
-
-#endif // PHYSICS_SERVER_2D_H

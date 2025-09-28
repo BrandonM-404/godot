@@ -28,13 +28,12 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef WGL_DETECT_VERSION_H
-#define WGL_DETECT_VERSION_H
+#pragma once
 
 #if defined(WINDOWS_ENABLED) && defined(GLES3_ENABLED)
 
-int detect_wgl_version();
+class Dictionary;
+
+Dictionary detect_wgl();
 
 #endif // WINDOWS_ENABLED && GLES3_ENABLED
-
-#endif // WGL_DETECT_VERSION_H

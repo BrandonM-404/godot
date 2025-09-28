@@ -34,10 +34,13 @@ import org.godotengine.godot.*;
 
 import android.content.Context;
 import android.content.res.Configuration;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
 import android.text.InputFilter;
 import android.text.InputType;
+import android.text.TextUtils;
+import android.text.method.DigitsKeyListener;
 import android.util.AttributeSet;
 import android.view.KeyEvent;
 import android.view.inputmethod.EditorInfo;
@@ -45,6 +48,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 
 import java.lang.ref.WeakReference;
+import java.util.Locale;
 
 public class GodotEditText extends EditText {
 	// ===========================================================
@@ -137,6 +141,7 @@ public class GodotEditText extends EditText {
 					}
 
 					int inputType = InputType.TYPE_CLASS_TEXT;
+					String acceptCharacters = null;
 					switch (edit.getKeyboardType()) {
 						case KEYBOARD_TYPE_DEFAULT:
 							inputType = InputType.TYPE_CLASS_TEXT;
@@ -148,7 +153,8 @@ public class GodotEditText extends EditText {
 							inputType = InputType.TYPE_CLASS_NUMBER;
 							break;
 						case KEYBOARD_TYPE_NUMBER_DECIMAL:
-							inputType = InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED;
+							inputType = InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED | InputType.TYPE_NUMBER_FLAG_DECIMAL;
+							acceptCharacters = "0123456789,.- ";
 							break;
 						case KEYBOARD_TYPE_PHONE:
 							inputType = InputType.TYPE_CLASS_PHONE;
@@ -164,6 +170,14 @@ public class GodotEditText extends EditText {
 							break;
 					}
 					edit.setInputType(inputType);
+
+					if (!TextUtils.isEmpty(acceptCharacters)) {
+						if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+							edit.setKeyListener(DigitsKeyListener.getInstance(Locale.getDefault(), true, true));
+						} else {
+							edit.setKeyListener(DigitsKeyListener.getInstance(acceptCharacters));
+						}
+					}
 
 					edit.mInputWrapper.setOriginText(text);
 					edit.addTextChangedListener(edit.mInputWrapper);
@@ -250,10 +264,8 @@ public class GodotEditText extends EditText {
 				isModifiedKey;
 	}
 
-	boolean hasHardwareKeyboard() {
-		Configuration config = getResources().getConfiguration();
-		return config.keyboard != Configuration.KEYBOARD_NOKEYS &&
-				config.hardKeyboardHidden == Configuration.HARDKEYBOARDHIDDEN_NO;
+	public boolean hasHardwareKeyboard() {
+		return mRenderView.getInputHandler().hasHardwareKeyboard();
 	}
 
 	// ===========================================================
@@ -264,16 +276,20 @@ public class GodotEditText extends EditText {
 			return;
 		}
 
+		int cursorStart = p_cursor_start;
+		int cursorEnd = p_cursor_end;
 		int maxInputLength = (p_max_input_length <= 0) ? Integer.MAX_VALUE : p_max_input_length;
-		if (p_cursor_start == -1) { // cursor position not given
+		if (cursorStart == -1) { // cursor position not given
 			this.mOriginText = p_existing_text;
 			this.mMaxInputLength = maxInputLength;
-		} else if (p_cursor_end == -1) { // not text selection
-			this.mOriginText = p_existing_text.substring(0, p_cursor_start);
-			this.mMaxInputLength = maxInputLength - (p_existing_text.length() - p_cursor_start);
+		} else if (cursorEnd == -1) { // not text selection
+			cursorStart = Math.min(p_existing_text.length(), cursorStart);
+			this.mOriginText = p_existing_text.substring(0, cursorStart);
+			this.mMaxInputLength = maxInputLength - (p_existing_text.length() - cursorStart);
 		} else {
-			this.mOriginText = p_existing_text.substring(0, p_cursor_end);
-			this.mMaxInputLength = maxInputLength - (p_existing_text.length() - p_cursor_end);
+			cursorEnd = Math.min(p_existing_text.length(), cursorEnd);
+			this.mOriginText = p_existing_text.substring(0, cursorEnd);
+			this.mMaxInputLength = maxInputLength - (p_existing_text.length() - cursorEnd);
 		}
 
 		this.mKeyboardType = p_type;
@@ -281,8 +297,8 @@ public class GodotEditText extends EditText {
 		final Message msg = new Message();
 		msg.what = HANDLER_OPEN_IME_KEYBOARD;
 		msg.obj = this;
-		msg.arg1 = p_cursor_start;
-		msg.arg2 = p_cursor_end;
+		msg.arg1 = cursorStart;
+		msg.arg2 = cursorEnd;
 		sHandler.sendMessage(msg);
 	}
 

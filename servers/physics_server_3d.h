@@ -28,13 +28,14 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef PHYSICS_SERVER_3D_H
-#define PHYSICS_SERVER_3D_H
+#pragma once
+
+#ifndef _3D_DISABLED
 
 #include "core/io/resource.h"
-#include "core/object/class_db.h"
 #include "core/object/gdvirtual.gen.inc"
-#include "core/variant/native_ptr.h"
+
+constexpr int MAX_CONTACTS_REPORTED_3D_MAX = 4096;
 
 class PhysicsDirectSpaceState3D;
 template <typename T>
@@ -89,6 +90,12 @@ public:
 
 	virtual void set_sleep_state(bool p_sleep) = 0;
 	virtual bool is_sleeping() const = 0;
+
+	virtual void set_collision_layer(uint32_t p_layer) = 0;
+	virtual uint32_t get_collision_layer() const = 0;
+
+	virtual void set_collision_mask(uint32_t p_mask) = 0;
+	virtual uint32_t get_collision_mask() const = 0;
 
 	virtual int get_contact_count() const = 0;
 
@@ -150,11 +157,11 @@ public:
 	struct RayResult {
 		Vector3 position;
 		Vector3 normal;
-		int face_index = -1;
 		RID rid;
 		ObjectID collider_id;
 		Object *collider = nullptr;
 		int shape = 0;
+		int face_index = -1;
 	};
 
 	virtual bool intersect_ray(const RayParameters &p_parameters, RayResult &r_result) = 0;
@@ -211,9 +218,9 @@ public:
 class PhysicsServer3DRenderingServerHandler : public Object {
 	GDCLASS(PhysicsServer3DRenderingServerHandler, Object)
 protected:
-	GDVIRTUAL2(_set_vertex, int, const Vector3 &)
-	GDVIRTUAL2(_set_normal, int, const Vector3 &)
-	GDVIRTUAL1(_set_aabb, const AABB &)
+	GDVIRTUAL2_REQUIRED(_set_vertex, int, const Vector3 &)
+	GDVIRTUAL2_REQUIRED(_set_normal, int, const Vector3 &)
+	GDVIRTUAL1_REQUIRED(_set_aabb, const AABB &)
 
 	static void _bind_methods();
 
@@ -606,6 +613,9 @@ public:
 	virtual void soft_body_set_linear_stiffness(RID p_body, real_t p_stiffness) = 0;
 	virtual real_t soft_body_get_linear_stiffness(RID p_body) const = 0;
 
+	virtual void soft_body_set_shrinking_factor(RID p_body, real_t p_shrinking_factor) = 0;
+	virtual real_t soft_body_get_shrinking_factor(RID p_body) const = 0;
+
 	virtual void soft_body_set_pressure_coefficient(RID p_body, real_t p_pressure_coefficient) = 0;
 	virtual real_t soft_body_get_pressure_coefficient(RID p_body) const = 0;
 
@@ -617,6 +627,11 @@ public:
 
 	virtual void soft_body_move_point(RID p_body, int p_point_index, const Vector3 &p_global_position) = 0;
 	virtual Vector3 soft_body_get_point_global_position(RID p_body, int p_point_index) const = 0;
+
+	virtual void soft_body_apply_point_impulse(RID p_body, int p_point_index, const Vector3 &p_impulse) = 0;
+	virtual void soft_body_apply_point_force(RID p_body, int p_point_index, const Vector3 &p_force) = 0;
+	virtual void soft_body_apply_central_impulse(RID p_body, const Vector3 &p_impulse) = 0;
+	virtual void soft_body_apply_central_force(RID p_body, const Vector3 &p_force) = 0;
 
 	virtual void soft_body_remove_all_pinned_points(RID p_body) = 0;
 	virtual void soft_body_pin_point(RID p_body, int p_point_index, bool p_pin) = 0;
@@ -687,7 +702,7 @@ public:
 	virtual void hinge_joint_set_param(RID p_joint, HingeJointParam p_param, real_t p_value) = 0;
 	virtual real_t hinge_joint_get_param(RID p_joint, HingeJointParam p_param) const = 0;
 
-	virtual void hinge_joint_set_flag(RID p_joint, HingeJointFlag p_flag, bool p_value) = 0;
+	virtual void hinge_joint_set_flag(RID p_joint, HingeJointFlag p_flag, bool p_enabled) = 0;
 	virtual bool hinge_joint_get_flag(RID p_joint, HingeJointFlag p_flag) const = 0;
 
 	enum SliderJointParam {
@@ -964,7 +979,7 @@ protected:
 	static void _bind_methods();
 
 public:
-	PhysicsServer3D::MotionResult *get_result_ptr() const { return const_cast<PhysicsServer3D::MotionResult *>(&result); }
+	PhysicsServer3D::MotionResult *get_result_ptr() { return &result; }
 
 	Vector3 get_travel() const;
 	Vector3 get_remainder() const;
@@ -1055,4 +1070,4 @@ VARIANT_ENUM_CAST(PhysicsServer3D::G6DOFJointAxisFlag);
 VARIANT_ENUM_CAST(PhysicsServer3D::AreaBodyStatus);
 VARIANT_ENUM_CAST(PhysicsServer3D::ProcessInfo);
 
-#endif // PHYSICS_SERVER_3D_H
+#endif // _3D_DISABLED
